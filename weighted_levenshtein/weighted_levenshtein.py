@@ -7,6 +7,7 @@ import numpy as np
 class LD:
     """Levenshtein distance
     """
+
     def __init__(self, words: List[str]):
         """
 
@@ -51,19 +52,44 @@ class LD:
         return list_pairwise
 
     def mono_levenshtein(self, str1, str2):
-        # print(str1, str2)
+        print("\n", str1, str2)
 
         # add empty row and column
-        n_rows = len(str1) + 1
-        n_cols = len(str2) + 1
+        n_row = len(str1) + 1
+        n_col = len(str2) + 1
 
         # generate zero matrix
-        # matrix = np.zeros((size_x, size_y))
+        matrix = np.zeros((n_row, n_col), dtype=np.uint8)
 
-        # dist = [[0 for x in range(n_cols)] for x in range(n_rows)]
-        # print(dist)
+        # first row and column, start from zero and indexed increasingly
+        for i in range(n_row):
+            matrix[i, 0] = i
+        for j in range(n_col):
+            matrix[0, j] = j
 
-        return "mono"
+        # two loops: row-wise and column-wise
+        for i in range(1, n_row):
+            for j in range(1, n_col):
+                # fill new value at position matrix[i, j] = x11
+                # x11 is calculated from the three surrounding values (x00, x01, x10) previously completed
+                # |-----------|
+                # | x00 | x01 |
+                # | x10 | x11 |
+                # |-----------|
+                x00 = matrix[i - 1, j - 1]  # substitution
+                x01 = matrix[i, j - 1]  # insertion
+                x10 = matrix[i - 1, j]  # deletion
+
+                # if two letters are identical, the substitution costs 0 otherwise 1
+                w_sub = 0 if str1[i - 1] == str2[j - 1] else 1
+                # weight of insertion and deletion
+                w_ins, w_del = 1, 1
+
+                matrix[i, j] = min(x00 + w_sub, x01 + w_ins, x10 + w_del)
+
+        print(matrix)
+        distance = matrix[n_row - 1, n_col - 1]
+        return distance
 
     def levenshtein(self):
         all_list_distance = []
@@ -72,10 +98,10 @@ class LD:
             all_list_distance.append(list_distance)
         print(all_list_distance)
 
-a = LD(['fs', 'sdf', 'sdf', '1'])
 
-print(a.pairwise())
+a = LD(['fs', 'sdf', 'sdf', '1'])
 a.levenshtein()
+
 
 class WLD:
     pass
