@@ -159,19 +159,3 @@ dist_matrix = np.array(
      [6, 8, 7, 8, 3, 10],
      [10, 10, 10, 9, 10, 0]], dtype=np.uint8)
 
-# a = WLD(['abc', 'ab', 'ec'],
-#         string_list=['a', 'b', 'c', 'd', 'e'],
-#         weight_substitution_matrix=dist_matrix)
-a = WLD(['abc', 'def', 'faccd', 'ab'],
-        string_list=['a', 'b', 'c', 'd', 'e', 'f'],
-        weight_substitution_matrix=dist_matrix)
-print("deletion", a.w_del)
-print("insertion", a.w_ins)
-
-# b = WLD(['abc', 'def', 'faccd', 'ab'])
-
-print(list(a.levenshtein()))
-# print(list(b.levenshtein()))
-
-
-# WLD(words, weight_insertion_type=WLD.WeightType.CUSTOM, custom_weight_insertion=2)
