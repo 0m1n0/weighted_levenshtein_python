@@ -1,14 +1,32 @@
 import itertools
-from typing import List
+from typing import List, Optional
 from tqdm import tqdm
 import numpy as np
 
 
-class LD:
-    """Levenshtein distance
+class WLD:
+    """Weighted Levenshtein distance
     """
+    class WeightType:
+        DEFAULT = 0
+        MIN = 1
+        MAX = 2
+        MEAN = 3
+        MEDIAN = 4
+        CUSTOM = 5
 
-    def __init__(self, words: List[str]):
+    weight_substitution_default = 1
+    weight_insertion_default = 1
+    weight_deletion_default = 1
+
+    # WLD(words, weight_insertion_type=WLD.WeightType.CUSTOM, custom_weight_insertion=2)
+
+    def __init__(self, words: List[str],
+                 weight_substitution_matrix: Optional[np.ndarray] = None,
+                 weight_insertion_type: Optional[WeightType] = WeightType.DEFAULT,
+                 weight_deletion_type: Optional[WeightType] = WeightType.DEFAULT,
+                 custom_weight_insertion: Optional[int] = 1,
+                 custom_weight_deletion: Optional[int] = 1):
         """
 
         Args:
@@ -29,6 +47,24 @@ class LD:
         # remove " " and sort by unique values
         no_empty = [x for x in words if not x.isspace()]
         self.words = sorted(set(no_empty), key=str.lower)
+
+        # substitution
+        if not weight_substitution_matrix:
+            self.w_sub = self.weight_substitution_default
+        else:
+            self.sub_matrix = weight_substitution_matrix
+
+        # insertion
+        if weight_insertion_type == WLD.WeightType.CUSTOM:
+            self.w_ins = custom_weight_insertion
+        else:
+            self.w_ins = self.weight_insertion_default
+
+        # deletion
+        if weight_deletion_type == WLD.WeightType.CUSTOM:
+            self.w_del = custom_weight_deletion
+        else:
+            self.w_del = self.weight_deletion_default
 
     def unique(self):
         """
@@ -82,10 +118,11 @@ class LD:
 
                 # if two letters are identical, the substitution costs 0 otherwise 1
                 w_sub = 0 if str1[i - 1] == str2[j - 1] else 1
+                w_sub = (str1[i - 1] != str2[j - 1]) * 1
                 # weight of insertion and deletion
                 w_ins, w_del = 1, 1
 
-                matrix[i, j] = min(x00 + w_sub, x01 + w_ins, x10 + w_del)
+                matrix[i, j] = min(x00 + w_sub, x01 + self.w_ins, x10 + w_del)
 
         print(matrix)
         distance = matrix[n_row - 1, n_col - 1]
@@ -94,20 +131,15 @@ class LD:
     def levenshtein(self):
         all_list_distance = []
         for str1, str2 in tqdm(self.pairwise()):
-            list_distance = [str1, str2, self.mono_levenshtein(str1, str2)]
-            all_list_distance.append(list_distance)
-        print(all_list_distance)
+            #list_distance = [str1, str2, self.mono_levenshtein(str1, str2)]
+            #all_list_distance.append(list_distance)
+            yield str1, str2, self.mono_levenshtein(str1, str2)
 
 
-a = LD(['fs', 'sdf', 'sdf', '1'])
-a.levenshtein()
 
+a = WLD(['fs', 'sdf', 'sdf', '1'])
+print("deletion", a.w_del)
+print("insertion", a.w_ins)
 
-class WLD:
-    pass
+print(list(a.levenshtein()))
 
-
-# wld = WL(Matrix, str)
-# wld.process(aa)
-#
-# WL(Matrix, str, aa)
