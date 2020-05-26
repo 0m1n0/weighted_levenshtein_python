@@ -111,9 +111,18 @@ class WLD:
         for j in range(n_col):
             matrix[0, j] = j * self.w_del
 
+        index_i = np.zeros(n_row+1, dtype=np.uint8)
+        index_j = np.zeros(n_col+1, dtype=np.uint8)
+
+        for i in range(1, n_row):
+            index_i[i] = self.strings.index(str1[i - 1])
+        for j in range(1, n_col):
+            index_j[j] = self.strings.index(str2[j - 1])
+
         # two loops: row-wise and column-wise
         for i in range(1, n_row):
             for j in range(1, n_col):
+
                 # fill new value at position matrix[i, j] = x11
                 # x11 is calculated from the three surrounding values (x00, x01, x10) previously completed
                 # |-----------|
@@ -125,13 +134,12 @@ class WLD:
                 x10 = matrix[i - 1, j]  # deletion
 
                 # get substitution weight for str1 and str2
-                w_sub = self.sub_matrix[self.strings.index(str1[i - 1]), self.strings.index(str2[j - 1])]
-                # # if two letters are identical, the substitution costs 0 otherwise a positive value
-                # w_sub = (str1[i - 1] != str2[j - 1]) * w_sub
+                w_sub = self.sub_matrix[index_i[i], index_j[j]]
 
-                matrix[i, j] = min(x00 + w_sub, x01 + self.w_ins, x10 + self.w_del)
+                matrix[i, j] = min(x00 + w_sub,
+                                   x01 + self.w_ins,
+                                   x10 + self.w_del)
 
-        print(matrix)
         distance = matrix[n_row - 1, n_col - 1]
         return distance
 
@@ -154,12 +162,16 @@ dist_matrix = np.array(
 # a = WLD(['abc', 'ab', 'ec'],
 #         string_list=['a', 'b', 'c', 'd', 'e'],
 #         weight_substitution_matrix=dist_matrix)
-a = WLD(['abc', 'def'],
+a = WLD(['abc', 'def', 'faccd', 'ab'],
         string_list=['a', 'b', 'c', 'd', 'e', 'f'],
         weight_substitution_matrix=dist_matrix)
 print("deletion", a.w_del)
 print("insertion", a.w_ins)
 
+# b = WLD(['abc', 'def', 'faccd', 'ab'])
+
 print(list(a.levenshtein()))
+# print(list(b.levenshtein()))
+
 
 # WLD(words, weight_insertion_type=WLD.WeightType.CUSTOM, custom_weight_insertion=2)
