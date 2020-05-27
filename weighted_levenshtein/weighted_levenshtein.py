@@ -1,3 +1,4 @@
+import csv
 import itertools
 from typing import List
 from tqdm import tqdm
@@ -66,13 +67,15 @@ class WLD:
         if weight_insertion_type == WLD.WeightType.CUSTOM:
             self.w_ins = custom_weight_insertion
         else:
-            self.w_ins = self.sub_matrix.max()
+            # self.w_ins = self.sub_matrix.max()
+            self.w_ins = int(np.median(self.sub_matrix))
 
         # deletion
         if weight_deletion_type == WLD.WeightType.CUSTOM:
             self.w_del = custom_weight_deletion
         else:
-            self.w_del = self.sub_matrix.max()
+            # self.w_del = self.sub_matrix.max()
+            self.w_del = int(np.median(self.sub_matrix))
 
     def unique(self):
         """
@@ -96,8 +99,6 @@ class WLD:
         return list_pairwise
 
     def mono_levenshtein(self, str1, str2):
-        print("\n", str1, str2)
-
         # add empty row and column
         n_row = len(str1) + 1
         n_col = len(str2) + 1
@@ -111,8 +112,8 @@ class WLD:
         for j in range(n_col):
             matrix[0, j] = j * self.w_del
 
-        index_i = np.zeros(n_row+1, dtype=np.uint8)
-        index_j = np.zeros(n_col+1, dtype=np.uint8)
+        index_i = np.zeros(n_row + 1, dtype=np.uint8)
+        index_j = np.zeros(n_col + 1, dtype=np.uint8)
 
         for i in range(1, n_row):
             index_i[i] = self.strings.index(str1[i - 1])
@@ -122,7 +123,6 @@ class WLD:
         # two loops: row-wise and column-wise
         for i in range(1, n_row):
             for j in range(1, n_col):
-
                 # fill new value at position matrix[i, j] = x11
                 # x11 is calculated from the three surrounding values (x00, x01, x10) previously completed
                 # |-----------|
@@ -151,11 +151,91 @@ class WLD:
             yield str1, str2, self.mono_levenshtein(str1, str2)
 
 
-dist_matrix = np.array(
-    [[4, 9, 5, 9, 6, 10],
-     [9, 4, 8, 5, 8, 10],
-     [5, 8, 5, 8, 7, 10],
-     [9, 5, 8, 3, 8, 9],
-     [6, 8, 7, 8, 3, 10],
-     [10, 10, 10, 9, 10, 0]], dtype=np.uint8)
+# dist_matrix = np.array(
+#     [[4, 9, 5, 9, 6, 10],
+#      [9, 4, 8, 5, 8, 10],
+#      [5, 8, 5, 8, 7, 10],
+#      [9, 5, 8, 3, 8, 9],
+#      [6, 8, 7, 8, 3, 10],
+#      [10, 10, 10, 9, 10, 0]], dtype=np.uint8)
+#
+# a = WLD(['abc', 'def', 'faccd', 'ab'],
+#         string_list=['a', 'b', 'c', 'd', 'e', 'f'],
+#         weight_substitution_matrix=dist_matrix)
+# print("deletion", a.w_del)
+# print("insertion", a.w_ins)
+# print(list(a.levenshtein()))
 
+
+class Blossum:
+    def __init__(self, matrix_filename):
+        self.matrix_filename = matrix_filename
+        # self.load_matrix(matrix_filename)
+
+    def load_matrix(self):
+        with open(self.matrix_filename) as matrix_file:
+            matrix = matrix_file.read()
+
+        lines = matrix.strip().split('\n')
+        header = lines.pop(0).split()
+        matrix = []
+
+        for row in lines:
+            values = [int(i) for i in row.split()[1:]]
+            matrix.append(values)
+
+        matrix = np.array(matrix)
+        # rescale
+        matrix = matrix.max() - matrix
+
+        return header, matrix
+
+
+blosum62 = Blossum("../data/BLOSUM62.txt")
+aa, blosum62_matrix = blosum62.load_matrix()
+# print("median", np.median(blosum62_matrix))
+# print(np.median(blosum62_matrix[np.triu_indices(blosum62_matrix.shape[0])]))
+# # statistics.median(m[np.triu_indices(m.shape[0])])
+# print("mean", np.mean(blosum62_matrix))
+# print(np.mean(blosum62_matrix[np.triu_indices(blosum62_matrix.shape[0])]))
+
+trb_cdr3 = ['CSAEQFF',
+            'CASGEAFF',
+            'CATMVTYF',
+            'CATMVTYF',
+            'CSATDRFF',
+            'CSPDGYTF',
+            'CASSYRFF',
+            'CANNCGFF',
+            'CSNQPQHF',
+            'CSVLRYF',
+            'CSADAFF',
+            'CSDGQAFF',
+            'CSNQPQHF',
+            'CSVPEQFF',
+            'CSNQPQHF',
+            'CATGAGGADGLTF',
+            'CAFPWGAGSYQLTF',
+            'CAFPWGAGSYQLTF',
+            'CAVSEDGGGSEKLVF',
+            'CAGQGPLRNTGKLIF',
+            'CILRDGWVTGYKYIF',
+            'CAVDKDGGATNKLIF']
+
+# tcr_ld = WLD(trb_cdr3)
+# print("deletion", tcr_ld.w_del)
+# print("insertion", tcr_ld.w_ins)
+# # print(list(tcr_ld.levenshtein()))
+# with open('../data/TRB_ld.csv', 'w') as f:
+#     writer = csv.writer(f, delimiter=';', lineterminator='\n')
+#     writer.writerows(list(tcr_ld.levenshtein()))
+#
+tcr_wld = WLD(trb_cdr3,
+              string_list=aa,
+              weight_substitution_matrix=blosum62_matrix)
+print("deletion", tcr_wld.w_del)
+print("insertion", tcr_wld.w_ins)
+# print(list(tcr_wld.levenshtein()))
+with open('../data/TRB_wld.csv', 'w') as f:
+    writer = csv.writer(f, delimiter=';', lineterminator='\n')
+    writer.writerows(list(tcr_wld.levenshtein()))
