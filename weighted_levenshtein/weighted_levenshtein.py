@@ -59,23 +59,26 @@ class WLD:
         else:
             self.strings = string_list
             self.sub_matrix = weight_substitution_matrix
+            # diagonal = 0
+            np.fill_diagonal(self.sub_matrix, 0)
 
         print(self.strings)
         print(self.sub_matrix)
+        np.save('../data/matrix.npy', self.sub_matrix)
 
         # insertion
         if weight_insertion_type == WLD.WeightType.CUSTOM:
             self.w_ins = custom_weight_insertion
         else:
-            # self.w_ins = self.sub_matrix.max()
-            self.w_ins = int(np.median(self.sub_matrix))
+            self.w_ins = self.sub_matrix.max()
+            # self.w_ins = int(np.median(self.sub_matrix))
 
         # deletion
         if weight_deletion_type == WLD.WeightType.CUSTOM:
             self.w_del = custom_weight_deletion
         else:
-            # self.w_del = self.sub_matrix.max()
-            self.w_del = int(np.median(self.sub_matrix))
+            self.w_del = self.sub_matrix.max()
+            # self.w_del = int(np.median(self.sub_matrix))
 
     def unique(self):
         """
@@ -222,14 +225,17 @@ trb_cdr3 = ['CSAEQFF',
             'CILRDGWVTGYKYIF',
             'CAVDKDGGATNKLIF']
 
-# tcr_ld = WLD(trb_cdr3)
-# print("deletion", tcr_ld.w_del)
-# print("insertion", tcr_ld.w_ins)
-# # print(list(tcr_ld.levenshtein()))
-# with open('../data/TRB_ld.csv', 'w') as f:
-#     writer = csv.writer(f, delimiter=';', lineterminator='\n')
-#     writer.writerows(list(tcr_ld.levenshtein()))
-#
+with open('../data/TRb_CD8_n42675_CDR3.csv', 'r') as f:
+    trb_cdr3 = [j for i in list(csv.reader(f)) for j in i]
+
+tcr_ld = WLD(trb_cdr3)
+print("deletion", tcr_ld.w_del)
+print("insertion", tcr_ld.w_ins)
+# print(list(tcr_ld.levenshtein()))
+with open('../data/TRB_ld.csv', 'w') as f:
+    writer = csv.writer(f, delimiter=';', lineterminator='\n')
+    writer.writerows(list(tcr_ld.levenshtein()))
+
 tcr_wld = WLD(trb_cdr3,
               string_list=aa,
               weight_substitution_matrix=blosum62_matrix)
@@ -239,3 +245,6 @@ print("insertion", tcr_wld.w_ins)
 with open('../data/TRB_wld.csv', 'w') as f:
     writer = csv.writer(f, delimiter=';', lineterminator='\n')
     writer.writerows(list(tcr_wld.levenshtein()))
+
+# dami = np.load('../data/dist.npy')
+# print(dami)
