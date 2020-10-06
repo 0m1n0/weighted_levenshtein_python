@@ -9,8 +9,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set()
 
-
-def distance_matrix(dist_type):
+def filter_distance_matrix(dist_type):
     filtered_dist_file = "../data/filtered_dist_{}.npy".format(dist_type)
     filtered_tcr_file = "../data/filtered_tcr_{}.txt".format(dist_type)
 
@@ -29,10 +28,6 @@ def distance_matrix(dist_type):
         dist = np.load('../data/dist_{}.npy'.format(dist_type))
         print('Raw distance matrix shape:', dist.shape)
 
-        # Load TCR sequence data
-        with open('../data/TRb_CD8_n42675_uppercase_CDR3.csv', 'r') as f:
-            tcr = [j for i in list(csv.reader(f)) for j in i]
-
         # max weighted Levenshtein distance of a substitution is 15
         min_value = 1 if dist_type == "ld" else 15
         print("Distance threshold:", min_value)
@@ -42,7 +37,9 @@ def distance_matrix(dist_type):
         dist = dist[np.ix_(rows, rows)]  # symmetric
         print('Filtered distance matrix shape:', dist.shape)
 
-
+        # Load TCR sequence data
+        with open('../data/TRb_CD8_n42675_uppercase_CDR3.csv', 'r') as f:
+            tcr = [j for i in list(csv.reader(f)) for j in i]
         # Get TCR corresponding to selected rows
         tcr = [tcr[i] for i in rows]
 
@@ -102,22 +99,25 @@ def dbscan(dist_type, dist):
     # epsilon = 2 if dist_type == "ld" else 16
     # optimal epsilon between 0.1-40% of lowest distance -> mean
     sort = np.unique(dist)
-    epsilon = round((sort[int(len(sort) * 0.01)] + sort[int(len(sort) * 0.4)]) / 2)
+    # epsilon = round((sort[int(len(sort) * 0.01)] + sort[int(len(sort) * 0.4)]) / 2)
+    epsilon = sort[int(len(sort) * 0.1)]
     print('epsilon value =', epsilon)
     clust = DBSCAN(eps=epsilon, metric="precomputed", min_samples=2)
     clust.fit(dist)
     # list of clusters and their respective points
     clusters = clust.labels_
+    print(len(set(clusters)))
     np.savetxt('../data/dbscan_clusters_{}.txt'.format(dist_type), clusters,
                delimiter=',', fmt='%i')
 
 
 dist_type = "ld"
-dist, tcr = distance_matrix(dist_type)
-dist, tcr = remove_duplicates(dist_type, dist, tcr)
+# dist, tcr = filter_distance_matrix(dist_type)
+# dist, tcr = remove_duplicates(dist_type, dist, tcr)
+# dbscan(dist_type, dist)
+dist = np.load('../data/dist_{}.npy'.format(dist_type))
 dbscan(dist_type, dist)
 
 dist_type = "wld"
-dist, tcr = distance_matrix(dist_type)
-dist, tcr = remove_duplicates(dist_type, dist, tcr)
+dist = np.load('../data/dist_{}.npy'.format(dist_type))
 dbscan(dist_type, dist)
