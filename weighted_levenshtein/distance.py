@@ -1,5 +1,6 @@
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import csv
 from sklearn.datasets.samples_generator import make_blobs
 from sklearn.neighbors import NearestNeighbors
@@ -28,6 +29,10 @@ def distance_matrix(dist_type):
         dist = np.load('../data/dist_{}.npy'.format(dist_type))
         print('Raw distance matrix shape:', dist.shape)
 
+        # Load TCR sequence data
+        with open('../data/TRb_CD8_n42675_uppercase_CDR3.csv', 'r') as f:
+            tcr = [j for i in list(csv.reader(f)) for j in i]
+
         # max weighted Levenshtein distance of a substitution is 15
         min_value = 1 if dist_type == "ld" else 15
         print("Distance threshold:", min_value)
@@ -37,9 +42,7 @@ def distance_matrix(dist_type):
         dist = dist[np.ix_(rows, rows)]  # symmetric
         print('Filtered distance matrix shape:', dist.shape)
 
-        # Load TCR sequence data
-        with open('../data/TRb_CD8_n42675_uppercase_CDR3.csv', 'r') as f:
-            tcr = [j for i in list(csv.reader(f)) for j in i]
+
         # Get TCR corresponding to selected rows
         tcr = [tcr[i] for i in rows]
 
@@ -49,6 +52,26 @@ def distance_matrix(dist_type):
         with open(filtered_tcr_file, "w") as f:
             for i in tcr:
                 f.write(str(i) + "\n")
+    return dist, tcr
+
+
+def remove_duplicates(dist_type, dist, tcr):
+    filtered_dist_file = "../data/filtered_dist_{}.npy".format(dist_type)
+    filtered_tcr_file = "../data/filtered_tcr_{}.txt".format(dist_type)
+
+    print('Distance matrix shape:', dist.shape)
+    unique_idx = pd.Series(tcr).drop_duplicates().index
+    tcr = pd.Series(tcr).drop_duplicates().to_list()
+    dist = dist[np.ix_(unique_idx, unique_idx)]
+    print('After drop of duplicated TCR sequences:', dist.shape)
+
+    # Save
+    print('Saving')
+    np.save(filtered_dist_file, dist)
+    with open(filtered_tcr_file, "w") as f:
+        for i in tcr:
+            f.write(str(i) + "\n")
+
     return dist, tcr
 
 
@@ -76,6 +99,7 @@ def get_optimal_epsilon(dist_type, dist):
 
 
 def dbscan(dist_type, dist):
+    # epsilon = 2 if dist_type == "ld" else 16
     # optimal epsilon between 0.1-40% of lowest distance -> mean
     sort = np.unique(dist)
     epsilon = round((sort[int(len(sort) * 0.01)] + sort[int(len(sort) * 0.4)]) / 2)
@@ -90,8 +114,10 @@ def dbscan(dist_type, dist):
 
 dist_type = "ld"
 dist, tcr = distance_matrix(dist_type)
+dist, tcr = remove_duplicates(dist_type, dist, tcr)
 dbscan(dist_type, dist)
 
 dist_type = "wld"
 dist, tcr = distance_matrix(dist_type)
+dist, tcr = remove_duplicates(dist_type, dist, tcr)
 dbscan(dist_type, dist)
