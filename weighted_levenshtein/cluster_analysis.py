@@ -53,10 +53,37 @@ def merge_df():
 
 merge_df()
 
+# https://scikit-learn.org/stable/modules/model_evaluation.html#multilabel-ranking-metrics
+# 3.3.3.1. Coverage error
+import numpy as np
+from sklearn.metrics import coverage_error
+y_true = np.array([[1, 0, 0], [0, 0, 1]])
 
+y_score = np.array([[0.75, 0.5, 1], [1, 0.2, 0.1]])
+coverage_error(y_true, y_score)
+2.5
 
+y_score = np.array([[1, 0, 0], [0, 0, 1]])
+1
 
+y_score = np.array([[4, 0, 0], [0, 0, 6]])
+1
 
+y_score = np.array([[0.4, 0, 0], [0, 0, 60]])
+1
+
+y_score = np.array([[0, 0, 0], [1, 0, 0]])
+3
+
+y_score = np.array([[0, 0, 0], [100, 0, 0]])
+3
+
+y_true = np.array([[1, 0, 1], [0, 0, 1]])
+y_score = np.array([[4, 0, 1], [0, 0, 1]])
+1.5
+
+y_score = np.array([[4, 1, 1], [0, 0, 1]])
+2
 
 # a[a['CDR3'].duplicated()]
 #              CDR3  AARAVFLAL  GILGFVFTL  ...  RPRGEVRFL  RYPLTFGW  RYPLTFGWCF
