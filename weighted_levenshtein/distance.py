@@ -2,7 +2,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import csv
-from sklearn.datasets.samples_generator import make_blobs
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
 from matplotlib import pyplot as plt
@@ -10,6 +9,7 @@ import seaborn as sns
 sns.set()
 
 def filter_distance_matrix(dist_type):
+    # Keep rows & columns having at least one minimum distance
     filtered_dist_file = "../data/filtered_dist_{}.npy".format(dist_type)
     filtered_tcr_file = "../data/filtered_tcr_{}.txt".format(dist_type)
 
@@ -94,7 +94,6 @@ def get_optimal_epsilon(dist_type, dist):
         plt.savefig('../data/plot/NearestNeighbors_{}.pdf'.format(dist_type))
 
 
-
 def dbscan(dist_type, dist):
     # epsilon = 2 if dist_type == "ld" else 16
     # optimal epsilon between 0.1-40% of lowest distance -> mean
@@ -111,13 +110,16 @@ def dbscan(dist_type, dist):
                delimiter=',', fmt='%i')
 
 
-dist_type = "ld"
+# dist_type = "ld"
 # dist, tcr = filter_distance_matrix(dist_type)
 # dist, tcr = remove_duplicates(dist_type, dist, tcr)
+# # dbscan(dist_type, dist)
+# dist = np.load('../data/dist_{}.npy'.format(dist_type))
 # dbscan(dist_type, dist)
-dist = np.load('../data/dist_{}.npy'.format(dist_type))
-dbscan(dist_type, dist)
+#
+# dist_type = "wld"
+# dist = np.load('../data/dist_{}.npy'.format(dist_type))
+# dbscan(dist_type, dist)
 
-dist_type = "wld"
-dist = np.load('../data/dist_{}.npy'.format(dist_type))
-dbscan(dist_type, dist)
+
+
