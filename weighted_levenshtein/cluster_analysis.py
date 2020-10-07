@@ -55,7 +55,7 @@ def format_df():
 
 def compute_homogeneity(df):
     # return score between 0 and 1
-    # 1 = rows have identical elements
+    # 1: rows have identical elements
     n = df.shape[0]
     n_half = math.ceil(n / 2)
     sum_cols = df.sum()
