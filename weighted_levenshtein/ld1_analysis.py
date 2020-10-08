@@ -1,7 +1,10 @@
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from scipy.spatial import distance
 from matplotlib import pyplot as plt
+import seaborn as sns
+pd.options.mode.chained_assignment = None  # default='warn'
 
 
 def get_ld1(plot=False):
@@ -43,7 +46,7 @@ def get_ld1(plot=False):
         plt.ylabel("TCR pairs")
         plt.savefig('../data/plot/LD1_WLD_distribution.pdf')
         plt.savefig('../data/plot/LD1_WLD_distribution.png')
-    print('TCR with LD=1:', df.shape[0])
+    print('TCR pairs with LD=1:', df.shape[0])
     return df
 
 
@@ -79,30 +82,43 @@ def format_df_ld1():
         print(df.head())
         df = df[df.index.isin(tcr)]
         df.to_csv(file, sep=';')
+    print("Unique TCR:", df.shape[0])
     return df
 
 
-def compute_homogeneity(df):
-    # return similarity score between 0 and 1
-    # 1: rows have identical elements
-    n = df.shape[0]
-    n_half = math.ceil(n / 2)
-    sum_cols = df.sum()
-    # remove sum 0
-    sum_cols = sum_cols[sum_cols != 0]
-    score = np.mean((np.maximum(sum_cols, n - sum_cols) - n_half) / (n - n_half))
-    return score
+def compute_distance(row, df_epi):
+    # return Hamming and Jaccard distance
+    tcr_pair = [row['CDR3_pair1'], row['CDR3_pair2']]
+    df_epi_pair = df_epi[df_epi['CDR3'].isin(tcr_pair)].iloc[:, 1:]
+    vec1, vec2 = df_epi_pair.values.tolist()[0], df_epi_pair.values.tolist()[1]
+    hamming = distance.hamming(vec1, vec2)
+    jaccard = distance.jaccard(vec1, vec2)
+    return pd.Series((hamming, jaccard))
 
 
-def compute_similarity_for_each_LD1pair():
-    # for each TCR pairs with LD=1, compute similarity of epitope binding
-    df_tcr_pairs = get_ld1()
-    df_epi = format_df_ld1()
+def compute_distance_for_each_LD1pair(plot=False):
+    ld1_dist_file = "../data/ld1_tcr_wld_distances.csv"
+
+    if Path(ld1_dist_file).is_file():
+        df_tcr_pairs = pd.read_csv(ld1_dist_file, sep=";")
+
+    else:
+        # for each TCR pairs with LD=1, compute distance of epitope binding
+        df_tcr_pairs = get_ld1()
+        df_epi = format_df_ld1()
+        dist_cols = ["Hamming", "Jaccard"]
+        print("Computing distance")
+        df_tcr_pairs[dist_cols] = df_tcr_pairs.apply(lambda row: compute_distance(row, df_epi), axis=1)
+        df_tcr_pairs.to_csv(ld1_dist_file, sep=';', index=False)
+
+    if plot:
+        dft_plot = df_tcr_pairs.iloc[:, 2:].melt("wld", var_name='Metric', value_name='Distance')
+        sns.lineplot(data=dft_plot, x="wld", y="Distance",
+                         hue='Metric')
+        plt.xlabel('WLD')
+        plt.title("Distance of Epitope binding profile of each TCR pair (LD=1)")
+        plt.savefig('../data/plot/epitope_distance_LD1.pdf')
+        plt.savefig('../data/plot/epitope_distance_LD1.png')
 
 
-
-
-
-#
-# df = format_df_ld1()
-# print(df.shape)
+compute_distance_for_each_LD1pair(plot=True)
