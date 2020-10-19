@@ -46,31 +46,37 @@ def get_ld1(plot=False):
         plt.ylabel("TCR pairs")
         plt.savefig('../data/plot/LD1_WLD_distribution.pdf')
         plt.savefig('../data/plot/LD1_WLD_distribution.png')
+        plt.close()
     print('TCR pairs with LD=1:', df.shape[0])
     return df
 
 
-def format_df_ld1():
+def format_df_ld1(col):
     # Construct dataframe with TCR of LD=1 with corresponding epitopes
-    file = "../data/CDR3_epitopes_LD1.csv"
+    file = "../data/CDR3_{}.csv".format(col)
+    file_ld1 = "../data/CDR3_{}_LD1.csv".format(col)
+    file_oneHot = "../data/CDR3_{}_LD1_oneHot.csv".format(col)
     if Path(file).is_file():
+        print(file)
         df = pd.read_csv(file, sep=';')
     else:
+        if col == 'Epitope':
+            col = 'Epitope_peptide'
         tcr = []
         with open("../data/TRb_CD8_n42675_uppercase_CDR3_unique.csv", "r") as f:
             for line in f:
                 tcr.append(line.strip())
 
-        # Load epitope data
+        # Load epitope or pathology data
         df = pd.read_csv('../data/TRb_CD8_n42675_uppercase.csv', sep=";")
-        df = df[['CDR3', 'Epitope_peptide']]
-        # Epitopes -> columns
-        one_hot = pd.get_dummies(df['Epitope_peptide'], prefix='', prefix_sep='')
-        df = df.drop('Epitope_peptide', axis=1)
+        df = df[['CDR3', col]]
+        # Epitopes or Pathology -> columns
+        one_hot = pd.get_dummies(df[col], prefix='', prefix_sep='')
+        df = df.drop(col, axis=1)
         df = df.join(one_hot)
         # one row = one unique TCR
         df = df.groupby(df['CDR3']).sum()
-        df[df != 0] = 1 # to binary
+        df.to_csv(file, sep=';')
 
         # Load LD=1 TCR data
         df_ld1 = pd.read_csv("../data/ld1_tcr_wld.csv", sep=";")
@@ -81,7 +87,9 @@ def format_df_ld1():
         # filter dataframe with only TCR LD=1
         print(df.head())
         df = df[df.index.isin(tcr)]
-        df.to_csv(file, sep=';')
+        df.to_csv(file_ld1, sep=';')
+        df[df != 0] = 1  # to binary
+        df.to_csv(file_oneHot, sep=';')
     print("Unique TCR:", df.shape[0])
     return df
 
@@ -96,16 +104,16 @@ def compute_distance(row, df_epi):
     return pd.Series((hamming, jaccard))
 
 
-def compute_distance_for_each_LD1pair(plot=False):
-    ld1_dist_file = "../data/ld1_tcr_wld_distances.csv"
+def compute_distance_for_each_LD1pair(col, plot=False):
+    ld1_dist_file = "../data/ld1_tcr_wld_distances_{}.csv".format(col)
 
     if Path(ld1_dist_file).is_file():
         df_tcr_pairs = pd.read_csv(ld1_dist_file, sep=";")
 
     else:
-        # for each TCR pairs with LD=1, compute distance of epitope binding
+        # for each TCR pairs with LD=1, compute distance of epitope binding or pathology
         df_tcr_pairs = get_ld1()
-        df_epi = format_df_ld1()
+        df_epi = format_df_ld1(col)
         dist_cols = ["Hamming", "Jaccard"]
         print("Computing distance")
         df_tcr_pairs[dist_cols] = df_tcr_pairs.apply(lambda row: compute_distance(row, df_epi), axis=1)
@@ -116,9 +124,13 @@ def compute_distance_for_each_LD1pair(plot=False):
         sns.lineplot(data=dft_plot, x="wld", y="Distance",
                          hue='Metric')
         plt.xlabel('WLD')
-        plt.title("Distance of Epitope binding profile of each TCR pair (LD=1)")
-        plt.savefig('../data/plot/epitope_distance_LD1.pdf')
-        plt.savefig('../data/plot/epitope_distance_LD1.png')
+        plt.title("Distance of {} binding profile of each TCR pair (LD=1)".format(col))
+        plt.savefig('../data/plot/distance_LD1_{}.pdf'.format(col))
+        plt.savefig('../data/plot/distance_LD1_{}.png'.format(col))
+        plt.close()
 
 
-compute_distance_for_each_LD1pair(plot=True)
+get_ld1(plot=True)
+# col='Epitope' or 'Pathology'
+compute_distance_for_each_LD1pair(col='Epitope', plot=True)
+compute_distance_for_each_LD1pair(col='Pathology', plot=True)
